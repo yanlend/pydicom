@@ -602,7 +602,16 @@ class DicomSeries(object):
             self._shape = [ds.Rows, ds.Columns]
             self._sampling = [float(ds.PixelSpacing[0]), float(ds.PixelSpacing[1])]
             return
-
+        
+        # Sort dicom_series by ImagePositionPatient, respecting the ImageOrientationPatient
+        orientation = [float(c) for c in self._datasets[0].ImageOrientationPatient]
+        offsets = [[float(c) for c in d.ImagePositionPatient] for d in self._datasets]
+        stack_cos = np.cross(orientation[:3], orientation[3:])
+        stack_sign = np.sign(stack_cos[np.argmax(np.abs(stack_cos))])
+        offset_sort = sorted(enumerate(offsets), key=lambda x: [stack_sign*float(y) for y in x[1]])
+        sort_idx = [x[0] for x in offset_sort]
+        self._datasets = [self._datasets[s] for s in sort_idx]
+        
         # Get previous
         ds1 = L[0]
 
